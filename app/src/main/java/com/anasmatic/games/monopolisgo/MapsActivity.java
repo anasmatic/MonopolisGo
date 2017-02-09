@@ -1,8 +1,12 @@
 /**
- * TODO: check for closing gps -low prior
- * TODO: apply onLocationChange -high prior 1
+ * TODO: test places API -high prior 2 use webservice urls ( api key : AIzaSyDu1kBkNL-TKHsZiJdFwaaIEvJv_vbbCyA )
+ *          https://developers.google.com/places/web-service/search
+ *          http://www.androidhive.info/2012/08/android-working-with-google-places-and-maps-tutorial/
+ *          https://github.com/railskarthi/GooglePlaces-Android/blob/master/src/com/titutorial/mapdemo/PlacesService.java
+ * TODO: detect user movement and update map view and Places according to how much use moves to make less requests to Places API
  * TODO: check on app sleep and on awake , if the location cahnged -low prior
- * TODO: test places API -high prior 2
+ * TODO: check for closing gps -low prior
+ * TODO: (DONE) apply onLocationChange -high prior 1
  */
 
 package com.anasmatic.games.monopolisgo;
@@ -23,7 +27,10 @@ import android.os.Bundle;
 import android.util.Log;
 import android.widget.Toast;
 
+import com.google.android.gms.awareness.snapshot.PlacesResult;
 import com.google.android.gms.common.ConnectionResult;
+import com.google.android.gms.common.GooglePlayServicesNotAvailableException;
+import com.google.android.gms.common.GooglePlayServicesRepairableException;
 import com.google.android.gms.common.api.GoogleApiClient;
 import com.google.android.gms.common.api.PendingResult;
 import com.google.android.gms.common.api.ResultCallback;
@@ -35,6 +42,9 @@ import com.google.android.gms.location.LocationSettingsRequest;
 import com.google.android.gms.location.LocationSettingsResult;
 import com.google.android.gms.location.LocationSettingsStates;
 import com.google.android.gms.location.LocationSettingsStatusCodes;
+import com.google.android.gms.location.places.PlaceFilter;
+import com.google.android.gms.location.places.Places;
+import com.google.android.gms.location.places.ui.PlacePicker;
 import com.google.android.gms.maps.CameraUpdateFactory;
 import com.google.android.gms.maps.GoogleMap;
 import com.google.android.gms.maps.OnMapReadyCallback;
@@ -67,6 +77,7 @@ public class MapsActivity extends FragmentActivity
     private boolean isPermissionDenied = false;
     private boolean isRequestingLocationUpdates = false;
 
+    private static final int PLACE_PICKER_REQUEST = 574;
     private static final int REQUEST_CHECK_SETTINGS = 682;
     private static final String REQUESTING_LOCATION_UPDATES_KEY = "requesting_location_updates_key";
     private static final String LOCATION_KEY = "location_key";
@@ -101,12 +112,16 @@ public class MapsActivity extends FragmentActivity
 
     private synchronized void buildGoogleApiClient() {
         if (mGoogleApiClient == null) {
-            mGoogleApiClient = new GoogleApiClient.Builder(this)
+            mGoogleApiClient = new GoogleApiClient
+                    .Builder(this)
                     .enableAutoManage(this /* FragmentActivity */,
                             this /* OnConnectionFailedListener */)//I don't need this now !
                     .addConnectionCallbacks(this)
                     .addOnConnectionFailedListener(this)
                     .addApi(LocationServices.API)
+                    .addApi(Places.GEO_DATA_API)
+                    .addApi(Places.PLACE_DETECTION_API)
+                    .enableAutoManage(this,this)
                     .build();
         }
     }
@@ -134,6 +149,8 @@ public class MapsActivity extends FragmentActivity
         mMap.moveCamera(CameraUpdateFactory.newLatLng(sydney));
 
         enableMyLocation();
+
+
     }
 
     private void enableMyLocation() {
@@ -263,7 +280,7 @@ public class MapsActivity extends FragmentActivity
 //OnConnectionFailedListener--------------------------------
     @Override
     public void onConnectionFailed(@NonNull ConnectionResult connectionResult) {
-
+        Log.d("@FAIL", "onConnectionFailed(): "+connectionResult.getErrorMessage());
     }
 // --------------------------------OnConnectionFailedListener|
 
@@ -277,8 +294,16 @@ public class MapsActivity extends FragmentActivity
 
         mMap.moveCamera(CameraUpdateFactory.newLatLngZoom(locationLatLng, 10));
 
+        //update places
+        //TODO: check how much locations changed before updating Places
+        nearbyPlacesRequest();
     }
-//--------------------------------LocationListener|
+
+    private void nearbyPlacesRequest() {
+
+    }
+
+    //--------------------------------LocationListener|
 @Override
     protected void onStart() {
         mGoogleApiClient.connect();
